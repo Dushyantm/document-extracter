@@ -11,6 +11,16 @@ services:
       - OLLAMA_MODEL=gemma3:4b
     entrypoint: ["/bin/bash", "/ollama-init.sh"]
     restart: unless-stopped
+    # GPU Configuration - Tries GPU first, falls back to CPU if unavailable
+    # For GPU: Requires NVIDIA GPU + NVIDIA Container Toolkit installed
+    # Without GPU: Automatically falls back to CPU-only mode
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "/bin/ollama", "list"]
       interval: 30s
