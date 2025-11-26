@@ -61,7 +61,7 @@ class ExtractionPipeline:
 
     def extract_to_dict(self, text: str) -> dict:
         """
-        Extract and return as dictionary (for JSON serialization).
+        Extract and return as dictionary for API response.
 
         Args:
             text: Raw text content from PDF parser.
@@ -69,5 +69,4 @@ class ExtractionPipeline:
         Returns:
             Dictionary with all extracted fields.
         """
-        result = self.extract(text)
-        return result.model_dump(exclude_none=True, exclude={"raw_text"})
+        return self.extract(text).model_dump(exclude={"raw_text"})
