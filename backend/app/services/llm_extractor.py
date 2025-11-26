@@ -50,8 +50,8 @@ You MUST follow ALL of these rules:
    - For each role, extract:
        - job_title
        - company
-       - start_date
-       - end_date
+       - start_date in the format of YYYY-MM
+       - end_date in the format of YYYY-MM
        - description (array of bullet points)
    - description MUST be an array of strings. Each bullet point in the resume is one array item.
    - If dates or bullets are missing, still create the work_experience entry and use "" or [] for missing fields.
@@ -128,7 +128,9 @@ Resume text:
 {text}
 
 JSON:"""
+            print(user_prompt)  # print the user prompt to the console
             response = self._generate(user_prompt, system_prompt)
+            print(response)  # print the response to the console
             json_str = self._extract_json(response)
             data = json.loads(json_str)
             result = ExtractedResume(**data, raw_text=text)
