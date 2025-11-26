@@ -2,6 +2,8 @@
 
 An intelligent resume parsing application that extracts structured information from PDF resumes using both traditional pattern matching and AI-powered LLM extraction.
 
+**Quick Start:** Get up and running in one command with `docker compose up --build` - includes automatic LLM model download!
+
 ## Key Features
 
 - **One-command Docker setup** - Automatic model download and configuration
@@ -58,7 +60,7 @@ An intelligent resume parsing application that extracts structured information f
 
 ### Option 1: Docker (Recommended)
 
-The fastest way to get started is using Docker:
+The fastest way to get started is using Docker with **just one command**:
 
 1. **Clone the repository**
    ```bash
@@ -66,40 +68,43 @@ The fastest way to get started is using Docker:
    cd "document extracter"
    ```
 
-2. **Create environment file** (optional)
-   ```bash
-   cp .env.example .env
-   # Edit .env if you want to customize settings
-   ```
-
-3. **Start Ollama service**
-   ```bash
-   docker compose -f docker-compose.ollama.yml up -d
-   ```
-
-   **Note:** The gemma3:4b model (~3.3GB) will be automatically downloaded on first startup. This may take several minutes depending on your internet connection.
-
-   Monitor the download progress:
-   ```bash
-   docker compose -f docker-compose.ollama.yml logs -f
-   ```
-
-   Wait for the message: "Ollama initialization complete!"
-
-4. **Start the application**
+2. **Start all services** (includes automatic model download)
    ```bash
    docker compose up --build
    ```
 
-5. **Access the application**
+   **What happens:**
+   - Ollama container starts and automatically downloads the gemma3:4b model (~3.3GB) on first run
+   - Backend waits for Ollama to be healthy, then starts
+   - Frontend starts and connects to the backend
+   - Total startup time: ~3-5 minutes on first run (includes model download)
+
+   **Monitor the progress:**
+   ```bash
+   # In another terminal, watch the logs
+   docker compose logs -f ollama
+   ```
+
+   Wait for the message: "Ollama initialization complete!"
+
+3. **Access the application**
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
    - Ollama API: http://localhost:11434
 
-**Note:** Use `docker compose` (two words) not `docker-compose` (hyphenated). The hyphenated version is deprecated.
+4. **Stop the application**
+   ```bash
+   docker compose down
+   ```
 
-For detailed Docker instructions, see [DOCKER_README.md](./DOCKER_README.md).
+**Optional:** Create a `.env` file to customize settings:
+```bash
+cp .env.example .env
+# Edit .env to customize
+```
+
+For detailed Docker instructions and troubleshooting, see [DOCKER_README.md](./DOCKER_README.md).
 
 ### Option 2: Local Development
 
@@ -215,7 +220,9 @@ document-extracter/
 
 ## Configuration
 
-The application can be configured using environment variables. Copy `.env.example` to `.env` and customize as needed:
+The application can be configured using environment variables. Configuration is optional - the application works out of the box with sensible defaults.
+
+To customize, copy `.env.example` to `.env` and modify as needed:
 
 ### Backend Configuration
 ```bash
@@ -225,20 +232,27 @@ LOG_LEVEL=INFO
 API_PREFIX=/api/v1
 
 # LLM Configuration
-LLM_BASE_URL=http://localhost:11434    # Ollama server URL
-LLM_MODEL_NAME=gemma3:4b               # Model to use
-LLM_TIMEOUT=60                         # Request timeout (seconds)
-LLM_TEMPERATURE=0.1                    # Model temperature
+LLM_BASE_URL=http://ollama:11434      # Ollama service name in Docker network
+LLM_MODEL_NAME=gemma3:4b              # Model to use
+LLM_TIMEOUT=60                        # Request timeout (seconds)
+LLM_TEMPERATURE=0.1                   # Model temperature
 
 # File Upload Limits
-MAX_FILE_SIZE_MB=10                    # Maximum file size
-MAX_PAGES=5                            # Maximum pages to process
+MAX_FILE_SIZE_MB=10                   # Maximum file size
+MAX_PAGES=5                           # Maximum pages to process
+```
+
+### Ollama Configuration
+```bash
+OLLAMA_MODEL=gemma3:4b                # Model to auto-download on startup
 ```
 
 ### Frontend Configuration
 ```bash
 VITE_API_URL=http://localhost:8000/api/v1
 ```
+
+**Note:** When running with Docker Compose, all services communicate via the internal Docker network (`resume-parser-network`).
 
 ## Usage
 
@@ -275,108 +289,6 @@ curl http://localhost:8000/api/v1/health
 Interactive API documentation is available at:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
-
-## Development
-
-### Running Tests
-
-Backend tests:
-```bash
-cd backend
-pytest
-```
-
-Frontend tests:
-```bash
-cd frontend
-npm test
-```
-
-### Code Formatting
-
-Backend:
-```bash
-cd backend
-black .
-ruff check .
-```
-
-Frontend:
-```bash
-cd frontend
-npm run lint
-```
-
-### Building for Production
-
-Backend:
-```bash
-cd backend
-uv pip install -e .
-```
-
-Frontend:
-```bash
-cd frontend
-npm run build
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### LLM parsing is slow or times out
-- Increase the `LLM_TIMEOUT` value in `.env`
-- Consider using a smaller model or the regex method for faster results
-- Ensure your machine has enough RAM (8GB+ recommended)
-
-#### Ollama connection errors
-- Verify Ollama container is running: `docker ps | grep ollama`
-- Check container logs: `docker compose -f docker-compose.ollama.yml logs -f`
-- Check Ollama is accessible: `curl http://localhost:11434/api/tags`
-- Verify the model is downloaded: `docker exec ollama-standalone ollama list` should show gemma3:4b
-- If model is missing, restart: `docker compose -f docker-compose.ollama.yml restart`
-
-#### Model download issues
-If the automatic model download fails or is interrupted:
-
-1. **Check the download progress:**
-   ```bash
-   docker compose -f docker-compose.ollama.yml logs -f
-   ```
-
-2. **Restart the container to retry download:**
-   ```bash
-   docker compose -f docker-compose.ollama.yml restart
-   ```
-
-3. **For a clean restart, remove the volume and start fresh:**
-   ```bash
-   docker compose -f docker-compose.ollama.yml down -v
-   docker compose -f docker-compose.ollama.yml up -d
-   ```
-   Note: This will re-download the entire model (~3.3GB)
-
-4. **Manual model pull (if automatic fails):**
-   ```bash
-   docker exec -it ollama-standalone ollama pull gemma3:4b
-   ```
-
-#### PDF parsing errors
-- Ensure the PDF is not password-protected
-- Check file size is within limits (MAX_FILE_SIZE_MB)
-- Verify the PDF contains extractable text (not scanned images)
-
-#### Port already in use
-- Change ports in `docker-compose.yml` or stop conflicting services
-- Default ports: 5173 (frontend), 8000 (backend), 11434 (Ollama)
-
-### Getting Help
-
-For more detailed troubleshooting:
-- Docker issues: See [DOCKER_README.md](./DOCKER_README.md)
-- Ollama setup: See [OLLAMA_SETUP.md](./OLLAMA_SETUP.md)
-- Technical details: See [TECHNICAL_BLUEPRINT.md](./TECHNICAL_BLUEPRINT.md)
 
 ## Architecture
 
