@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function UploadZone({ onFileSelect, isLoading }) {
+export default function UploadZone({ onFileSelect, isLoading, parsingMethod, setParsingMethod }) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -92,7 +93,39 @@ export default function UploadZone({ onFileSelect, isLoading }) {
           </label>
         </div>
 
-        <div className="mt-6 text-center text-sm text-gray-500">
+        {/* Collapsible Settings Section */}
+        <div className="mt-6">
+          <button
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            disabled={isLoading}
+            className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mx-auto"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="text-sm font-medium">Settings</span>
+            {isSettingsOpen ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+
+          {isSettingsOpen && (
+            <div className="mt-3 bg-white rounded-lg border border-gray-200 p-3 shadow-sm transition-all duration-200 ease-in-out max-w-xs mx-auto">
+              <select
+                id="parsing-method"
+                value={parsingMethod}
+                onChange={(e) => setParsingMethod(e.target.value)}
+                disabled={isLoading}
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="regex">Regex (Fast)</option>
+                <option value="llm">LLM (Slower)</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 text-center text-sm text-gray-500">
           <p>Your data is processed securely and never stored</p>
         </div>
       </div>

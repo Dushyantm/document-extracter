@@ -10,16 +10,20 @@ function App() {
   const [pdfFile, setPdfFile] = useState(null);
   const [extractedData, setExtractedData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [parsingMethod, setParsingMethod] = useState('regex');
 
   const handleFileSelect = async (file) => {
     setPdfFile(file);
     setIsLoading(true);
 
-    // Show loading toast
-    const loadingToast = toast.loading('Processing your resume...');
+    // Show loading toast with appropriate message
+    const loadingMessage = parsingMethod === 'llm'
+      ? 'Processing with AI... This may take a moment.'
+      : 'Processing your resume...';
+    const loadingToast = toast.loading(loadingMessage);
 
     try {
-      const result = await parseResume(file);
+      const result = await parseResume(file, parsingMethod);
       setExtractedData(result);
 
       // Check if we got partial or empty data
@@ -146,7 +150,12 @@ function App() {
             },
           }}
         />
-        <UploadZone onFileSelect={handleFileSelect} isLoading={isLoading} />
+        <UploadZone
+          onFileSelect={handleFileSelect}
+          isLoading={isLoading}
+          parsingMethod={parsingMethod}
+          setParsingMethod={setParsingMethod}
+        />
       </>
     );
   }
@@ -159,8 +168,14 @@ function App() {
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
           <div className="text-center">
             <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Processing Resume</h2>
-            <p className="text-gray-600">Extracting information from your PDF...</p>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              {parsingMethod === 'llm' ? 'AI Processing Resume' : 'Processing Resume'}
+            </h2>
+            <p className="text-gray-600">
+              {parsingMethod === 'llm'
+                ? 'Using AI to extract information... This may take a minute.'
+                : 'Extracting information from your PDF...'}
+            </p>
           </div>
         </div>
       </>

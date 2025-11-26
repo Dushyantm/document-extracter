@@ -2,15 +2,22 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
-export const parseResume = async (file) => {
+export const parseResume = async (file, method = 'regex') => {
   const formData = new FormData();
   formData.append('file', file);
 
+  // Select endpoint based on parsing method
+  const endpoint = method === 'llm'
+    ? `${API_BASE_URL}/resume/parse-llm`
+    : `${API_BASE_URL}/resume/parse`;
+
   try {
-    const response = await axios.post(`${API_BASE_URL}/resume/parse`, formData, {
+    const response = await axios.post(endpoint, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      // Increase timeout for LLM-based parsing
+      timeout: method === 'llm' ? 120000 : 30000, // 2 minutes for LLM, 30 seconds for regex
     });
     return response.data;
   } catch (error) {
@@ -35,6 +42,10 @@ export const parseResume = async (file) => {
     }
 
     if (error.request) {
+      // Check if it's a timeout error
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Request timed out. The LLM-based parsing is taking longer than expected. Please try again or use regex-based parsing.');
+      }
       throw new Error('Cannot connect to server. Please make sure the backend is running on http://localhost:8000');
     }
 
