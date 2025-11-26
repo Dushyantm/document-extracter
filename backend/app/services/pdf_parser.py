@@ -60,7 +60,6 @@ class TextParser(BaseParser):
         """
         try:
             result = await extract_file(str(file_path))
-
             return ParsedPDF(
                 content=result.content,
                 page_count=getattr(result, "page_count", 1),

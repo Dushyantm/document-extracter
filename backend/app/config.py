@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     # Extraction settings
     MIN_CONFIDENCE_THRESHOLD: float = 0.5
 
+    # LLM extraction settings (Ollama)
+    LLM_MODEL_NAME: str = "gemma3:4b"
+    LLM_BASE_URL: str = "http://localhost:11434"
+    LLM_TIMEOUT: int = 30
+    LLM_TEMPERATURE: float = 0.1
+
     # Logging settings
     LOG_LEVEL: str = "INFO"
 

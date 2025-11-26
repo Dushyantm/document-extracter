@@ -20,11 +20,11 @@ class ExtractionPipeline:
         self.education_extractor = EducationExtractor()
         self.experience_extractor = ExperienceExtractor()
         self.skills_extractor = SkillsExtractor()
-        logger.info("Extraction pipeline initialized")
+        logger.info("Regex extraction pipeline initialized")
 
     def extract(self, text: str) -> ExtractedResume:
         """
-        Extract all information from resume text.
+        Extract all information from resume text using regex patterns.
 
         Args:
             text: Raw text content from PDF parser.
@@ -32,15 +32,38 @@ class ExtractionPipeline:
         Returns:
             ExtractedResume with all extracted fields.
         """
-        logger.info("Starting extraction pipeline")
+        logger.info("Starting regex extraction pipeline")
+        warnings = []
 
-        # Extract each section
-        contact = self.contact_extractor.extract(text)
-        education = self.education_extractor.extract(text)
-        work_experience = self.experience_extractor.extract(text)
-        skills = self.skills_extractor.extract(text)
+        try:
+            contact = self.contact_extractor.extract(text)
+        except Exception as e:
+            logger.warning(f"Contact extraction failed: {e}")
+            warnings.append(f"Contact extraction failed: {str(e)}")
+            from app.models.extraction import ContactInfo
+            contact = ContactInfo()
 
-        # Build result
+        try:
+            education = self.education_extractor.extract(text)
+        except Exception as e:
+            logger.warning(f"Education extraction failed: {e}")
+            warnings.append(f"Education extraction failed: {str(e)}")
+            education = []
+
+        try:
+            work_experience = self.experience_extractor.extract(text)
+        except Exception as e:
+            logger.warning(f"Work experience extraction failed: {e}")
+            warnings.append(f"Work experience extraction failed: {str(e)}")
+            work_experience = []
+
+        try:
+            skills = self.skills_extractor.extract(text)
+        except Exception as e:
+            logger.warning(f"Skills extraction failed: {e}")
+            warnings.append(f"Skills extraction failed: {str(e)}")
+            skills = []
+
         result = ExtractedResume(
             contact=contact,
             education=education,
@@ -50,12 +73,16 @@ class ExtractionPipeline:
         )
 
         logger.info(
-            f"Extraction complete: "
+            f"Regex extraction complete: "
             f"contact={bool(contact.first_name)}, "
             f"education={len(education)}, "
             f"experience={len(work_experience)}, "
-            f"skills={len(skills)}"
+            f"skills={len(skills)}, "
+            f"warnings={len(warnings)}"
         )
+
+        if warnings:
+            logger.warning(f"Extraction warnings: {warnings}")
 
         return result
 

@@ -17,6 +17,14 @@ class OCRBackend(Enum):
     PADDLE = "Paddle"
 
 
+class ExtractionMethod(Enum):
+    """Available extraction methods."""
+
+    REGEX = "regex"
+    LLM = "llm"
+    HYBRID = "hybrid"
+
+
 class Patterns:
     """Regex patterns for extraction."""
 
