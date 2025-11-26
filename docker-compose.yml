@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: resume-parser-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - LOG_LEVEL=INFO
+      - API_PREFIX=/api/v1
+      - LLM_BASE_URL=http://host.docker.internal:11434
+      - LLM_MODEL_NAME=gemma3:4b
+      - LLM_TIMEOUT=60
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    restart: unless-stopped
+    networks:
+      - resume-parser-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: resume-parser-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - resume-parser-network
+
+networks:
+  resume-parser-network:
+    driver: bridge

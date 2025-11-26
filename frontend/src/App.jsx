@@ -36,7 +36,7 @@ function App() {
 
       if (extractedCount === 0) {
         // No data extracted at all
-        toast.warning(
+        toast(
           <div>
             <p className="font-semibold">No data extracted</p>
             <p className="text-sm mt-1">Please fill in the form manually</p>
@@ -44,6 +44,11 @@ function App() {
           {
             id: loadingToast,
             duration: 4000,
+            icon: '⚠️',
+            style: {
+              background: '#f59e0b',
+              color: '#fff',
+            },
           }
         );
       } else if (extractedCount < 3) {

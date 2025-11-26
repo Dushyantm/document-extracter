@@ -3,7 +3,7 @@
 import logging
 import json
 import re
-from ollama import chat
+from ollama import Client
 
 from app.models.extraction import ExtractedResume, ContactInfo
 from app.config import get_settings
@@ -17,8 +17,8 @@ class LLMExtractor:
     def __init__(self):
         """Initialize LLM extractor with settings from config."""
         self.settings = get_settings()
-        self.client = None
-        logger.info("LLM extractor initialized")
+        self.client = Client(host=self.settings.LLM_BASE_URL)
+        logger.info(f"LLM extractor initialized with host: {self.settings.LLM_BASE_URL}")
 
     def extract(self, text: str) -> ExtractedResume:
         """
@@ -35,7 +35,65 @@ class LLMExtractor:
         try:
             system_prompt = """You are an expert resume parser. Extract ALL information from the resume and return ONLY valid JSON. Do not include any explanatory text."""
 
-            user_prompt = f"""Extract the following information from this resume and return as JSON:
+            user_prompt = f"""Extract ALL possible resume information from the text below and return ONLY a JSON object in the exact format shown.
+
+You MUST follow ALL of these rules:
+
+1. WORK EXPERIENCE (CRITICAL)
+   - You MUST extract EVERY job under the WORK EXPERIENCE (or equivalent) section.
+   - This includes ALL roles, even earlier or junior roles.
+   - For example, if the text contains:
+       "Senior Software Engineer"
+       "Software Engineer"
+       "Junior Developer"
+     then the JSON MUST contain THREE separate work_experience objects.
+   - For each role, extract:
+       - job_title
+       - company
+       - start_date
+       - end_date
+       - description (array of bullet points)
+   - description MUST be an array of strings. Each bullet point in the resume is one array item.
+   - If dates or bullets are missing, still create the work_experience entry and use "" or [] for missing fields.
+   - Continue collecting work experience until the next major section (e.g., EDUCATION, SKILLS, PROJECTS).
+
+2. EDUCATION
+   - Extract ALL education entries.
+   - For each entry, extract:
+       - degree
+       - field_of_study
+       - institution
+       - graduation_year
+   - If multiple degrees or schools exist, include ALL of them as separate objects.
+   - If any field is missing, use "".
+
+3. CONTACT INFORMATION
+   - Parse and fill:
+       - first_name
+       - last_name
+       - email
+       - phone
+       - city
+       - state
+   - If the address line has full address, extract city and state from it if possible.
+   - If any field is not present, use "".
+
+4. SKILLS
+   - Extract ALL technical skills, including:
+       - Programming languages
+       - Frameworks and libraries
+       - Databases
+       - Tools and platforms (e.g., Docker, Git, AWS)
+       - Cloud & DevOps technologies
+       - Certifications (these SHOULD also be included in the skills array)
+   - Flatten the list so that each skill is a separate string.
+   - Remove duplicates.
+   - If no skills are found, return an empty array [].
+
+5. OUTPUT FORMAT (STRICT)
+   - You MUST return ONLY valid JSON.
+   - Do NOT include any explanation, comments, or extra text.
+   - The JSON MUST match exactly this structure:
 
 {{
   "contact": {{
@@ -66,24 +124,14 @@ class LLMExtractor:
   "skills": []
 }}
 
-Rules:
-- Extract ALL education entries (multiple if present)
-- Extract ALL work experience entries (multiple if present)
-- For work experience descriptions, include each bullet point as an array item
-- For skills, extract all technical skills, programming languages, frameworks, and tools
-- If a field is not found, use empty string or empty array
-- Return ONLY the JSON object, no other text
-
 Resume text:
 {text}
 
 JSON:"""
-
             response = self._generate(user_prompt, system_prompt)
             json_str = self._extract_json(response)
             data = json.loads(json_str)
             result = ExtractedResume(**data, raw_text=text)
-
             logger.info(
                 f"LLM extraction complete: "
                 f"contact={bool(result.contact.first_name)}, "
@@ -118,7 +166,7 @@ JSON:"""
             f"temp={self.settings.LLM_TEMPERATURE}"
         )
 
-        response = chat(
+        response = self.client.chat(
             model=self.settings.LLM_MODEL_NAME,
             messages=[
                 {'role': 'system', 'content': system_prompt},
@@ -127,11 +175,10 @@ JSON:"""
             stream=False,
             options={
                 'temperature': self.settings.LLM_TEMPERATURE,
-                'num_predict': 2048,
             }
         )
 
-        return response.message.content
+        return response['message']['content']
 
     def _extract_json(self, text: str) -> str:
         """
